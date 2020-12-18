@@ -7,9 +7,9 @@ on:
       name:
         description: 'Manually execute Tests'
   push:
-    branches:
-      - "*"
-      - "**/*"
+#    branches:
+#      - "*"
+#      - "**/*"
     paths:
       - 'src/*.py'
 
