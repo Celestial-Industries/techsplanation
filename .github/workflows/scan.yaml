@@ -3,9 +3,10 @@ name: Anchore
 
 on:
   workflow_run:
-    workflows: ["Build"]
+    workflows: ["build"]
     branches:
       - "main"
+      - "pipeline-1"
     types:
       - completed
   workflow_dispatch:
