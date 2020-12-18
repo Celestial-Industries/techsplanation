@@ -60,7 +60,6 @@ jobs:
       uses: aws-actions/amazon-ecs-render-task-definition@v1
       with:
         task-definition: ./task-definition.json
-        # TODO Does this needs to change
         container-name: nginx
         image: ${{ steps.task-def-image.outputs.image }}
 
@@ -71,7 +70,8 @@ jobs:
         task-definition: ${{ steps.render-ecs-task.outputs.task-definition }}
         service: live-crawdad
         cluster: live-crawdad-dev
-        wait-for-service-stability: false
+        #wait-for-service-stability: false
+        wait-for-service-stability: true
 
     - name: Failure notification
       uses: act10ns/slack@v1
