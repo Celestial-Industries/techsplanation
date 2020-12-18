@@ -2,17 +2,23 @@
 name: Anchore
 
 on:
+  workflow_run:
+    workflows: ["Build"]
+    branches:
+      - "main"
+    types:
+      - completed
   workflow_dispatch:
     inputs:
       name:
         description: 'Manually Execute Tests'
-  pull_request:
-    branches:
-      - master
-# for testing
-  push:
-    branches:
-      - 'pipeline-1'
+#  pull_request:
+#    branches:
+#      - master
+## for testing
+#  push:
+#    branches:
+#      - 'pipeline-1'
 
 env:
   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
