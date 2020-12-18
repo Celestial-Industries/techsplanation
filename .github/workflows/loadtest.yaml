@@ -19,4 +19,3 @@ jobs:
       uses: k6io/action@v0.1
       with:
         filename: loadtest/test.js
-        sync-labels: true
