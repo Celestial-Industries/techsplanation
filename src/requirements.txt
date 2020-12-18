@@ -1,0 +1,6 @@
+black
+pylint
+mypy
+bandit
+pydocstyle
+isort

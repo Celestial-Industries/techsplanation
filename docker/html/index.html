@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Testing GMcD</title>
+<script src="https://randojs.com/1.0.0.js"></script>
+<script>
+    function showRandomNumber() {
+        document.getElementById("myNumber").innerHTML = rando(0, 500);
+    }
+</script>
+<style>
+    body {
+        width: 35em;
+        margin: 0 auto;
+        font-family: Tahoma, Verdana, Arial, sans-serif;
+    }
+    #myNumber{
+        font-size:100px;
+        text-align:center;
+        margin:50px auto;
+        font-family:Arial, sans-serif;
+            }
+</style>
+</head>
+<body onload="showRandomNumber();">
+<h1>Welcome to nginx</h1>
+<p> If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required. </p>
+<div id="myNumber"></div>
+
+<p>
+<script> document.write(new Date().toLocaleString()); </script>
+</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+
+
+
