@@ -1,0 +1,104 @@
+# Anchore scanning testing.
+name: Anchore
+
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Manually Execute Tests'
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - 'pipeline-1'
+
+env:
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  IMAGE-1: traefik
+  IMAGE-2: nginx
+  TAG-1: v2.4
+  TAG-2: alpine
+#  IMAGE-1: openjdk
+#  IMAGE-2: openjdk
+#  TAG-1: 10-jdk
+#  TAG-2: 8-jre-alpine
+
+jobs:
+  set-artifact:
+    runs-on: ubuntu-latest
+    env:
+      NAME: API
+      VERSION: 1.2.3
+      ENV: Dev
+    steps:
+      # DONT PUT slashes to escape " into this as its not setup for it as far as could tell
+    - name: create-json
+      id: create-json
+      uses: jsdaniell/create-json@1.1.2
+      with:
+        name: "build.json"
+        json: '{"builds":[{"imageName":"${{ env.IMAGE-1 }}","tag":"${{ env.TAG-1 }}"},{"imageName":"${{ env.IMAGE-2 }}","tag":"${{ env.TAG-2 }}"}]}'
+
+    - name: Upload build json artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: build.json
+        path: build.json
+
+  set-matrix:
+    needs: set-artifact
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+    - name: Download build json artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: build.json
+
+    - name: Set Matrix
+      id: set-matrix
+      run: echo "::set-output name=matrix::$(cat build.json)"
+
+  scan-images:
+    needs: set-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.set-matrix.outputs.matrix) }}
+      fail-fast: false
+    steps:
+    - name: Debug image name
+      run: echo ${{ matrix.builds.tag }}
+
+    - name: Install grype
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b ${GITHUB_WORKSPACE}
+        sudo mv ${GITHUB_WORKSPACE}/grype /usr/local/bin
+
+    - name: debug pre image tag
+      run: echo ${{ matrix.builds.tag }}
+
+    - name: debug pre image var
+      run: echo ${{ matrix.builds.imageName }}:${{ matrix.builds.tag }}
+
+    - name: Create image var
+      run: echo "IMAGE=${{ matrix.builds.imageName }}:${{ matrix.builds.tag }}" >> $GITHUB_ENV
+
+    - name: debug pre image var
+      run: echo ${{ env.IMAGE }}
+
+    - name: Grype scan
+      run: grype ${{ env.IMAGE }}
+
+    - name: debug output payload
+      run: echo ${{ tojson(needs.set-artifact.outputs.payload) }}
+
+    - name: Failure notification
+      uses: act10ns/slack@v1
+      with:
+        status: ${{ job.status }}
+        steps: ${{ toJson(steps) }}
+        channel: '#githubactions_notifications'
+#      if: cancelled() || failure()
+      if: always()
