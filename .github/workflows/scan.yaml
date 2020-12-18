@@ -69,7 +69,8 @@ jobs:
       with:
         name: "build.json"
         #json: '{"builds":[{"imageName":"${{ env.IMAGE-1 }}","tag":"${{ env.TAG-1 }}"},{"imageName":"${{ env.IMAGE-2 }}","tag":"${{ env.TAG-2 }}"}]}'
-        json: '{"builds":[{"imageName":"${{ env.IMAGE-1 }}","tag":"${{ env.TAG-1 }}"},{"imageName":"${{ env.IMAGE-2 }}","tag":"${{ env.TAG-2 }},{"imageName":"${{ steps.login-ecr.outputs.registry }}","tag":"${{ env.AWSIMAGE }}"}]}'
+        json: '{"builds":[{"imageName":"${{ env.IMAGE-1 }}","tag":"${{ env.TAG-1 }}"},{"imageName":"${{ steps.login-ecr.outputs.registry }}","tag":"${{ env.AWSIMAGE }}"}]}'
+        #json: '{"builds":[{"imageName":"${{ env.IMAGE-1 }}","tag":"${{ env.TAG-1 }}"},{"imageName":"${{ env.IMAGE-2 }}","tag":"${{ env.TAG-2 }},{"imageName":"${{ steps.login-ecr.outputs.registry }}","tag":"${{ env.AWSIMAGE }}"}]}'
 
     - name: Upload build json artifact
       uses: actions/upload-artifact@v2
@@ -109,7 +110,7 @@ jobs:
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
-      
+
     - name: Debug image name
       run: echo ${{ matrix.builds.tag }}
 
