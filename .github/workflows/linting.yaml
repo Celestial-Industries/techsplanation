@@ -22,8 +22,8 @@ env:
 
 jobs:
   lintAll:
-    name: lint non main branches
-    if: github.ref != 'refs/heads/main'
+    name: lint non master branches
+    if: github.ref != 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -84,9 +84,9 @@ jobs:
         # For conitune on error and sending notification for lints
         if: cancelled() || failure() || steps.black.outcome == 'failure' || steps.pylint.outcome == 'failure' || steps.mypy.outcome == 'failure' || steps.bandit.outcome == 'failure' || steps.pydocstyle.outcome == 'failure' || steps.isort.outcome == 'failure'
 
-  lintMain:
-    name: lint main
-    if: github.ref == 'refs/heads/main'
+  lintMaster:
+    name: lint master
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
