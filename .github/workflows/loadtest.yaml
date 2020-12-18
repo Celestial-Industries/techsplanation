@@ -1,12 +1,11 @@
 # Load test action from K6
-# adding comment for change
 # https://github.com/marketplace/actions/k6-load-test
 
 name: Load Test
 on:
   schedule:
-    # * is a special character in YAML, so you have to quote this string
-    - cron: '*/15 * * * *'
+    # * is a special character in YAML so you have to quote this string
+    - cron:  '*/15 * * * *'
   workflow_dispatch:
     inputs:
       name:
