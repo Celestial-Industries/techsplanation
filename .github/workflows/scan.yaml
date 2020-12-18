@@ -1,5 +1,5 @@
 # Anchore scanning testing.
-name: Anchore
+name: scan
 
 on:
   workflow_run:

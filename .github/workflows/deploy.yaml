@@ -4,14 +4,13 @@ on:
   workflow_run:
     workflows: ['scan']
     branches:
-      - 'pipeline-2'
       - 'master'
     types:
       - completed
 ## for testing
-  push:
-    branches:
-      - 'pipeline-2'
+#  push:
+#    branches:
+#      - 'pipeline-2'
 
 env:
   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -69,7 +68,7 @@ jobs:
         task-definition: ${{ steps.render-ecs-task.outputs.task-definition }}
         service: live-crawdad
         cluster: live-crawdad-dev
-        wait-for-service-stability: true
+        wait-for-service-stability: false
 
     - name: Failure notification
       uses: act10ns/slack@v1
