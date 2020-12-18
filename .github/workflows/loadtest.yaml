@@ -1,4 +1,5 @@
 # Load test action from K6
+# adding comment for change
 # https://github.com/marketplace/actions/k6-load-test
 
 name: Load Test
@@ -24,3 +25,4 @@ jobs:
       uses: k6io/action@v0.1
       with:
         filename: loadtest/test.js
+        sync-labels: true
