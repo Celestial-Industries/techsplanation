@@ -3,12 +3,9 @@ name: build
 # Controls when the action will run. Workflow runs when manually triggered using the UI
 # or API.
 on:
-  pull_request:
-    branches:
-      - master
   push:
     branches:
-      - 'pipeline-1'
+      - master
 jobs:
   build:
     runs-on: ubuntu-latest
