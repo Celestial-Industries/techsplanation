@@ -5,8 +5,7 @@ name: Load Test
 on:
   schedule:
     # * is a special character in YAML, so you have to quote this string
-    #- cron: '0 2 * * *'
-    - cron: '*/5 * * * *'
+    - cron: '*/30 * * * *'
   workflow_dispatch:
     inputs:
       name:
