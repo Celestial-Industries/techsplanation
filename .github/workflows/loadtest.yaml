@@ -6,11 +6,6 @@ on:
   schedule:
     # * is a special character in YAML so you have to quote this string
     - cron:  '*/15 * * * *'
-  workflow_dispatch:
-    inputs:
-      name:
-        description: 'Run load test'
-        required: false
 
 jobs:
   k6_load_test:
