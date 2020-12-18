@@ -69,8 +69,11 @@ jobs:
       with:
         name: "build.json"
         #json: '{"builds":[{"imageName":"${{ env.IMAGE-1 }}","tag":"${{ env.TAG-1 }}"},{"imageName":"${{ env.IMAGE-2 }}","tag":"${{ env.TAG-2 }}"}]}'
-        json: '{"builds":[{"imageName":"${{ env.IMAGE-1 }}","tag":"${{ env.TAG-1 }}"},{"imageName":"${{ steps.login-ecr.outputs.registry }}","tag":"${{ env.AWSIMAGE }}"}]}'
+        json: '{"builds":[{"imageName":"${{ env.IMAGE-1 }}","tag":"${{ env.TAG-1 }}"},{"imageName":"${{ steps.login-ecr.outputs.registry }}/dev-testing","tag":"${{ env.AWSIMAGE }}"}]}'
         #json: '{"builds":[{"imageName":"${{ env.IMAGE-1 }}","tag":"${{ env.TAG-1 }}"},{"imageName":"${{ env.IMAGE-2 }}","tag":"${{ env.TAG-2 }},{"imageName":"${{ steps.login-ecr.outputs.registry }}","tag":"${{ env.AWSIMAGE }}"}]}'
+
+    - name: Debug build.json
+      run: echo build.json
 
     - name: Upload build json artifact
       uses: actions/upload-artifact@v2
