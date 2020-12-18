@@ -8,6 +8,10 @@ on:
       - 'master'
     types:
       - completed
+## for testing
+  push:
+    branches:
+      - 'pipeline-2'
 
 env:
   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

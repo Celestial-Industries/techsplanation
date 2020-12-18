@@ -5,7 +5,6 @@ on:
   workflow_run:
     workflows: ['build']
     branches:
-      - 'pipeline-1'
       - 'master'
     types:
       - completed
