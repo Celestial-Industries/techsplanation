@@ -111,6 +111,9 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
+    - name: Login to Amazon ECR
+      run: aws ecr get-login-password --region ca-central-1 | docker login --username AWS --password-stdin 949207431024.dkr.ecr.ca-central-1.amazonaws.com
+
     - name: Debug image name
       run: echo ${{ matrix.builds.tag }}
 
