@@ -115,7 +115,7 @@ jobs:
       run: aws ecr get-login-password --region ca-central-1 | docker login --username AWS --password-stdin 949207431024.dkr.ecr.ca-central-1.amazonaws.com
 
     - name: Pull image
-      run: docker pull ${{ env.IMAGE }}
+      run: docker pull ${{ matrix.builds.imageName }}:${{ matrix.builds.tag }}
 
     - name: Debug image name
       run: echo ${{ matrix.builds.tag }}
