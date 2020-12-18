@@ -9,6 +9,9 @@ on:
     types:
       - completed
 
+env:
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
 jobs:
   deploy:
     needs: build
@@ -64,3 +67,11 @@ jobs:
         service: live-crawdad
         cluster: live-crawdad-dev
         wait-for-service-stability: true
+
+    - name: Failure notification
+      uses: act10ns/slack@v1
+      with:
+        status: ${{ job.status }}
+        steps: ${{ toJson(steps) }}
+        channel: '#githubactions_notifications'
+      if: cancelled() || failure()
