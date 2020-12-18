@@ -1,11 +1,8 @@
-# Load test action from K6
-# https://github.com/marketplace/actions/k6-load-test
-
 name: Load Test
 on:
   schedule:
     # * is a special character in YAML so you have to quote this string
-    - cron:  '*/10 * * * *'
+    - cron:  '*/5 * * * *'
 
 jobs:
   k6_load_test:
