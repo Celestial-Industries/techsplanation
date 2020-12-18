@@ -1,25 +1,17 @@
 # Anchore scanning testing.
-name: Anchore
+name: scan
 
 on:
   workflow_run:
     workflows: ['build']
     branches:
-      - 'pipeline-1'
       - 'master'
     types:
       - completed
-#  workflow_dispatch:
-#    inputs:
-#      name:
-#        description: 'Manually Execute Tests'
-#  pull_request:
-#    branches:
-#      - master
 ## for testing
 #  push:
 #    branches:
-#      - 'pipeline-1'
+#      - 'pipeline-2'
 
 env:
   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -40,13 +32,40 @@ jobs:
       VERSION: 1.2.3
       ENV: Dev
     steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ca-central-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: get latest ECR image
+      run: |
+        AWSIMAGE=$(aws ecr describe-images --output json --repository-name dev-testing --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' | jq . --raw-output)
+        echo "AWSIMAGE=$AWSIMAGE" >> $GITHUB_ENV
+
+    - name: AWS Image Debug
+      run: |
+        echo $AWSIMAGE
+        echo ${{ env.AWSIMAGE }}
+        echo ${{ steps.login-ecr.outputs.registry }}:${{ env.AWSIMAGE }}
+
       # DONT PUT slashes to escape " into this as its not setup for it as far as could tell
     - name: create-json
       id: create-json
       uses: jsdaniell/create-json@1.1.2
       with:
         name: "build.json"
-        json: '{"builds":[{"imageName":"${{ env.IMAGE-1 }}","tag":"${{ env.TAG-1 }}"},{"imageName":"${{ env.IMAGE-2 }}","tag":"${{ env.TAG-2 }}"}]}'
+        #json: '{"builds":[{"imageName":"${{ env.IMAGE-1 }}","tag":"${{ env.TAG-1 }}"},{"imageName":"${{ env.IMAGE-2 }}","tag":"${{ env.TAG-2 }}"}]}'
+        json: '{"builds":[{"imageName":"${{ env.IMAGE-1 }}","tag":"${{ env.TAG-1 }}"},{"imageName":"${{ steps.login-ecr.outputs.registry }}/dev-testing","tag":"${{ env.AWSIMAGE }}"}]}'
+        #json: '{"builds":[{"imageName":"${{ env.IMAGE-1 }}","tag":"${{ env.TAG-1 }}"},{"imageName":"${{ env.IMAGE-2 }}","tag":"${{ env.TAG-2 }},{"imageName":"${{ steps.login-ecr.outputs.registry }}","tag":"${{ env.AWSIMAGE }}"}]}'
+
+    - name: Debug build.json
+      run: echo build.json
 
     - name: Upload build json artifact
       uses: actions/upload-artifact@v2
@@ -76,6 +95,23 @@ jobs:
       matrix: ${{ fromJson(needs.set-matrix.outputs.matrix) }}
       fail-fast: false
     steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ca-central-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: ECR Login
+      run: aws ecr get-login-password --region ca-central-1 | docker login --username AWS --password-stdin 949207431024.dkr.ecr.ca-central-1.amazonaws.com
+
+    - name: Pull image
+      run: docker pull ${{ matrix.builds.imageName }}:${{ matrix.builds.tag }}
+
     - name: Debug image name
       run: echo ${{ matrix.builds.tag }}
 
