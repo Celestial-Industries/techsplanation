@@ -2,7 +2,7 @@ name: deploy
 
 on:
   workflow_run:
-    workflows: ['Anchore']
+    workflows: ['scan']
     branches:
       - 'pipeline-2'
       - 'master'
