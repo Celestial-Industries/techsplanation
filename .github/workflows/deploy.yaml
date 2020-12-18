@@ -50,11 +50,6 @@ jobs:
         aws ecs describe-task-definition --task-definition live-crawdad-dev --query taskDefinition > ./task-definition.json
         echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$(git rev-parse --short=8 ${{ github.sha }})"
 
-#    - name: Sleep for 5 seconds
-#      uses: jakejarvis/wait-action@master
-#      with:
-#        time: '5s'
-
     - name: Render AWS task
       id: render-ecs-task
       uses: aws-actions/amazon-ecs-render-task-definition@v1
