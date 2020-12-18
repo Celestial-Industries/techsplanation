@@ -1,0 +1,66 @@
+name: deploy
+
+on:
+  workflow_run:
+    workflows: ['Anchore']
+    branches:
+      - 'pipeline-2'
+      - 'master'
+    types:
+      - completed
+
+jobs:
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ca-central-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Checkout repo
+      uses: actions/checkout@v2
+
+    - name: Set git hash env var
+      id: git-hash
+      run: |
+        echo "::set-env name=GIT_HASH::$(git rev-parse --short=8 ${{ github.sha }})"
+
+    - name: Setup task definition and set container image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: dev-testing
+      id: task-def-image
+      run: |
+        aws ecs describe-task-definition --task-definition live-crawdad-dev --query taskDefinition > ./task-definition.json
+        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$(git rev-parse --short=8 ${{ github.sha }})"
+
+#    - name: Sleep for 5 seconds
+#      uses: jakejarvis/wait-action@master
+#      with:
+#        time: '5s'
+
+    - name: Render AWS task
+      id: render-ecs-task
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: ./task-definition.json
+        # TODO Does this needs to change
+        container-name: nginx
+        image: ${{ steps.task-def-image.outputs.image }}
+
+    - name: Deploy to Amazon ECS service
+      id: deploy-ecs-service
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.render-ecs-task.outputs.task-definition }}
+        service: live-crawdad
+        cluster: live-crawdad-dev
+        wait-for-service-stability: true
