@@ -3,6 +3,10 @@ on:
   schedule:
     # * is a special character in YAML so you have to quote this string
     - cron:  '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Manually execute'
 
 jobs:
   k6_load_test:
