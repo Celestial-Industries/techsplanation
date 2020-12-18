@@ -1,4 +1,5 @@
 # Load test action from K6
+# adding comment for change
 # https://github.com/marketplace/actions/k6-load-test
 
 name: Load Test
