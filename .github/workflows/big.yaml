@@ -1,0 +1,230 @@
+name: all
+
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
+on:
+  push:
+    branches:
+      - master
+
+env:
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  IMAGE-1: traefik
+  IMAGE-2: nginx
+  TAG-1: v2.4
+  TAG-2: alpine
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ca-central-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Checkout repo
+      uses: actions/checkout@v2
+
+    - name: Build, tag, and push image to Amazon ECR
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: dev-testing
+      working-directory: docker
+      run: |
+        docker build . -t $ECR_REGISTRY/$ECR_REPOSITORY:$(git rev-parse --short=8 ${{ github.sha }}) -t $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY
+
+  set-artifact:
+    runs-on: ubuntu-latest
+    needs: build
+    env:
+      NAME: API
+      VERSION: 1.2.3
+      ENV: Dev
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ca-central-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: get latest ECR image
+      run: |
+        AWSIMAGE=$(aws ecr describe-images --output json --repository-name dev-testing --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' | jq . --raw-output)
+        echo "AWSIMAGE=$AWSIMAGE" >> $GITHUB_ENV
+
+    - name: AWS Image Debug
+      run: |
+        echo $AWSIMAGE
+        echo ${{ env.AWSIMAGE }}
+        echo ${{ steps.login-ecr.outputs.registry }}:${{ env.AWSIMAGE }}
+
+      # DONT PUT slashes to escape " into this as its not setup for it as far as could tell
+    - name: create-json
+      id: create-json
+      uses: jsdaniell/create-json@1.1.2
+      with:
+        name: "build.json"
+        #json: '{"builds":[{"imageName":"${{ env.IMAGE-1 }}","tag":"${{ env.TAG-1 }}"},{"imageName":"${{ env.IMAGE-2 }}","tag":"${{ env.TAG-2 }}"}]}'
+        json: '{"builds":[{"imageName":"${{ env.IMAGE-1 }}","tag":"${{ env.TAG-1 }}"},{"imageName":"${{ steps.login-ecr.outputs.registry }}/dev-testing","tag":"${{ env.AWSIMAGE }}"}]}'
+        #json: '{"builds":[{"imageName":"${{ env.IMAGE-1 }}","tag":"${{ env.TAG-1 }}"},{"imageName":"${{ env.IMAGE-2 }}","tag":"${{ env.TAG-2 }},{"imageName":"${{ steps.login-ecr.outputs.registry }}","tag":"${{ env.AWSIMAGE }}"}]}'
+
+    - name: Debug build.json
+      run: echo build.json
+
+    - name: Upload build json artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: build.json
+        path: build.json
+
+  set-matrix:
+    needs: set-artifact
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+    - name: Download build json artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: build.json
+
+    - name: Set Matrix
+      id: set-matrix
+      run: echo "::set-output name=matrix::$(cat build.json)"
+
+  scan-images:
+    needs: set-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.set-matrix.outputs.matrix) }}
+      fail-fast: false
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ca-central-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: ECR Login
+      run: aws ecr get-login-password --region ca-central-1 | docker login --username AWS --password-stdin 949207431024.dkr.ecr.ca-central-1.amazonaws.com
+
+    - name: Pull image
+      run: docker pull ${{ matrix.builds.imageName }}:${{ matrix.builds.tag }}
+
+    - name: Debug image name
+      run: echo ${{ matrix.builds.tag }}
+
+    - name: Install grype
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b ${GITHUB_WORKSPACE}
+        sudo mv ${GITHUB_WORKSPACE}/grype /usr/local/bin
+
+    - name: debug pre image tag
+      run: echo ${{ matrix.builds.tag }}
+
+    - name: debug pre image var
+      run: echo ${{ matrix.builds.imageName }}:${{ matrix.builds.tag }}
+
+    - name: Create image var
+      run: echo "IMAGE=${{ matrix.builds.imageName }}:${{ matrix.builds.tag }}" >> $GITHUB_ENV
+
+    - name: debug pre image var
+      run: echo ${{ env.IMAGE }}
+
+    - name: Grype scan
+      run: grype ${{ env.IMAGE }}
+
+    - name: debug output payload
+      run: echo ${{ tojson(needs.set-artifact.outputs.payload) }}
+
+    - name: Failure notification
+      uses: act10ns/slack@v1
+      with:
+        status: ${{ job.status }}
+        steps: ${{ toJson(steps) }}
+        channel: '#githubactions_notifications'
+      if: always()
+
+  deploy:
+    needs: scan-images
+    environment:
+      name: dev
+      url: http://dev-live-crawdad-2097355108.ca-central-1.elb.amazonaws.com/
+    runs-on: ubuntu-latest
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ca-central-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Checkout repo
+      uses: actions/checkout@v2
+
+    - name: Set git hash env var
+      id: git-hash
+      run: |
+        echo "GIT_HASH=$(git rev-parse --short=8 ${{ github.sha }})" >> $GITHUB_ENV
+
+    - name: Setup task definition and set container image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: dev-testing
+      id: task-def-image
+      run: |
+        aws ecs describe-task-definition --task-definition live-crawdad-dev --query taskDefinition > ./task-definition.json
+        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$(git rev-parse --short=8 ${{ github.sha }})"
+
+#    - name: Sleep for 5 seconds
+#      uses: jakejarvis/wait-action@master
+#      with:
+#        time: '5s'
+
+    - name: Render AWS task
+      id: render-ecs-task
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: ./task-definition.json
+        container-name: nginx
+        image: ${{ steps.task-def-image.outputs.image }}
+
+    - name: Deploy to Amazon ECS service
+      id: deploy-ecs-service
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.render-ecs-task.outputs.task-definition }}
+        service: live-crawdad
+        cluster: live-crawdad-dev
+        #wait-for-service-stability: false
+        wait-for-service-stability: true
+
+    - name: Failure notification
+      uses: act10ns/slack@v1
+      with:
+        status: ${{ job.status }}
+        steps: ${{ toJson(steps) }}
+        channel: '#githubactions_notifications'
+      if: cancelled() || failure()
