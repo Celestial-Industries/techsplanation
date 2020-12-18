@@ -37,7 +37,7 @@ jobs:
     - name: Set git hash env var
       id: git-hash
       run: |
-        echo "::set-env name=GIT_HASH::$(git rev-parse --short=8 ${{ github.sha }})"
+        echo "GIT_HASH=$(git rev-parse --short=8 ${{ github.sha }})" >> $GITHUB_ENV
 
     - name: Setup task definition and set container image
       env:
