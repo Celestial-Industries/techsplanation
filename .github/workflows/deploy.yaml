@@ -17,6 +17,9 @@ env:
 
 jobs:
   deploy:
+    environment:
+      name: dev
+      url: http://dev-live-crawdad-2097355108.ca-central-1.elb.amazonaws.com/
     runs-on: ubuntu-latest
     steps:
     - name: Configure AWS credentials
